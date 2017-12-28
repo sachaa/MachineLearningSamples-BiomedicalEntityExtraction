@@ -43,10 +43,10 @@ import requests
 import lxml
 import unidecode 
 import pubmed_parser as pp
-from azureml.logging import get_azureml_logger
+# from azureml.logging import get_azureml_logger
 
-run_logger = get_azureml_logger()
-run_logger.log('amlrealworld.BiomedicalEntityExtraction.Download-and-Parse-XML-Spark','true')
+# run_logger = get_azureml_logger()
+# run_logger.log('amlrealworld.BiomedicalEntityExtraction.Download-and-Parse-XML-Spark','true')
 
 ######################################################
 #   download_xml_gz_files()
@@ -81,9 +81,9 @@ def download_xml_gz_files():
         print(len(file_collection))
         
         for i in range(1, num_xml_files+1, batch_size):          
-            file_collection = ['medline17n%04d.xml.gz' % j
+            file_collection = ['pubmed18n%04d.xml.gz' % j
                         for j in range(i, min([i + batch_size, num_xml_files +1]) )
-                        if not os.path.exists(os.path.join(xml_local_dir,'medline17n%04d.xml.gz' % j))]
+                        if not os.path.exists(os.path.join(xml_local_dir,'pubmed18n%04d.xml.gz' % j))]
         
             if len(file_collection) ==0 :
                 continue
@@ -119,9 +119,9 @@ def process_files():
         print('The directory {} does not exist'.format(xml_local_dir))
   
     for i in range(1, num_xml_files+1, batch_size):          
-        file_collection = [os.path.join(xml_local_dir,'medline17n%04d.xml.gz' % j)
+        file_collection = [os.path.join(xml_local_dir,'pubmed18n%04d.xml.gz' % j)
                        for j in range(i, i + batch_size) 
-                       if os.path.exists(os.path.join(xml_local_dir,'medline17n%04d.xml.gz' % j))]        
+                       if os.path.exists(os.path.join(xml_local_dir,'pubmed18n%04d.xml.gz' % j))]        
         
         if len(file_collection) ==0 :
             continue
@@ -167,8 +167,9 @@ def process_files():
     print("Process downloaded MEDLINE XML files - end")
 
 
-sc = SparkContext.getOrCreate()
-# sc = SparkContext(conf=conf)
+# sc = SparkContext.getOrCreate()
+sc = SparkContext()
+spark = SparkSession(sc)
 
 #Specify the path of the egg file
 #sc.addPyFile('wasb:///pubmed_parser-0.1-py3.5.egg')
@@ -176,11 +177,14 @@ sc = SparkContext.getOrCreate()
 # directory
 home_dir = os.getcwd()
 xml_local_dir = os.path.join(home_dir, 'medline', 'xml_files')
-xml_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'xml_files')
-parse_results_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'tsv_files')
+# xml_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'xml_files')
+xml_remote_dir = os.path.join('D:\\bio-ner\\', 'pubmed_data', 'xml_files')
+# parse_results_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'tsv_files')
+parse_results_remote_dir = os.path.join('D:\\bio-ner\\tsv\\', 'pubmed_data', 'tsv_files')
 
 batch_size = 50
-num_xml_files = 892 
+# num_xml_files = 892
+num_xml_files = 2 
 print("\t\t1_Download_and_Parse_XML_Spark.py")
 print("batch_size = {}, num_xml_files = {}".format(batch_size,num_xml_files) )
 download_xml_gz_files()

@@ -112,3 +112,6 @@ azureml-logs
 # Azure ML config files
 .runconfig
 .compute
+
+# GZ files
+*.gz

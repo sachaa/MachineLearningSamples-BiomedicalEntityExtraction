@@ -28,19 +28,22 @@ import numpy as np
 import datetime
 import os
 import sys
-from azureml.logging import get_azureml_logger
+# from azureml.logging import get_azureml_logger
 
-run_logger = get_azureml_logger()
-run_logger.log('amlrealworld.BiomedicalEntityExtraction.Train-Word2Vec-Model-Spark','true')
+# run_logger = get_azureml_logger()
+# run_logger.log('amlrealworld.BiomedicalEntityExtraction.Train-Word2Vec-Model-Spark','true')
     
-spark = SparkSession \
-    .builder \
-    .appName("Train word embeddings model") \
-    .getOrCreate()
+# spark = SparkSession \
+#     .builder \
+#     .appName("Train word embeddings model") \
+#     .getOrCreate()
+
+sc = SparkContext()
+spark = SparkSession(sc)
 
 # <b> Setup the paths where the TSV files are located <b>
 
-parse_results_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'tsv_files')
+parse_results_remote_dir = os.path.join('D:\\bio-ner\\tsv', 'pubmed_data', 'tsv_files')
 
 
 # ### Read in Pubmed Abstracts from tsv
@@ -53,7 +56,7 @@ parse_results_remote_dir = os.path.join('wasb:///', 'pubmed_data', 'tsv_files')
 # block fails for some reason, you can resume from the latest file.
 
 timestart = datetime.datetime.now()
-num_xml_files = 892 
+num_xml_files = 2 
 batch_size =50
 pubmed_tsv_file = os.path.join(parse_results_remote_dir, 'batch#{}.tsv'.format(1))   
 print("Reading file {}".format(pubmed_tsv_file))     
@@ -118,7 +121,7 @@ abstracts_full_df3 = abstracts_full_df2.withColumn("abstractNew", lower(col("abs
     withColumn("abstractNew", regexp_replace("abstractNew", '[^\w-_ ]', ""))
 
 abstracts_full_df3.printSchema()
-# print("abstracts_full_df3.head() = {}".format(abstracts_full_df3.head()))
+print("abstracts_full_df3.head() = {}".format(abstracts_full_df3.head()))
 
 # Tokenize the Abstracts
 print("tokenizating the abstracts... ")
@@ -130,7 +133,7 @@ abstracts_full_df4 = tokenizer.transform(abstracts_full_df3)
 print("After tokenization: ")
 abstracts_full_df4.printSchema()
 print("abstracts_full_df4.count() = {}".format(abstracts_full_df4.count()))
-# print("abstracts_full_df4.head() = {}".format(abstracts_full_df4.head()))
+print("abstracts_full_df4.head() = {}".format(abstracts_full_df4.head()))
 
 # PRINT HOW MUCH TIME IT TOOK TO RUN THE CELL
 timeend = datetime.datetime.now()
@@ -173,6 +176,7 @@ model = word2Vec.fit(abstracts_full_df4)
 timeend = datetime.datetime.now()
 timedelta = round((timeend - timestart).total_seconds() / 60, 2)
 print("model.getVectors().count() = {}".format(model.getVectors().count()))
+print("model.getVectors().head() = {}".format(model.getVectors().head()))
 print("Time taken to train the word2Vec model: " + str(timedelta) + " mins")
 
 
@@ -180,12 +184,14 @@ print("Time taken to train the word2Vec model: " + str(timedelta) + " mins")
 # <b> Manually Evaluate Similar words by getting nearest neighbours </b>
 
 # In[13]:
-model.findSynonyms("cancer", 20).select("word").head(20) #Returns types of Cancers, hormones responsible for Cancer etc.
 
 
 # In[14]:
 model.findSynonyms("brain", 20).select("word").head(20)# Returns Different Parts of the Brain
 '''
+
+#Returns types of Cancers, hormones responsible for Cancer etc.
+print("findSynonyms('oxygen') = {}".format(model.findSynonyms("oxygen", 20).select("word").head(20)))
 
 # <b>Store the word vectors in a SQL table</b>
 df = model.getVectors()
@@ -238,7 +244,7 @@ df_1.printSchema()
 
 
 #Change the path to the location where you want to store the Embeddings
-model_file = "wasb:///Models/word2vec_pubmed_model_vs_{}_ws_{}_mc_{}_parquet_files".\
+model_file = "D:\\bio-ner\\tsv\\Models\\word2vec_pubmed_model_vs_{}_ws_{}_mc_{}_parquet_files".\
     format(vector_size, window_size, min_count)
 # print("Saving the model into binary format {}".format(model_file))
 df_1.repartition(1000).write.mode("overwrite").parquet(model_file, compression='gzip')
@@ -255,7 +261,7 @@ df_1.repartition(1000).write.mode("overwrite").parquet(model_file, compression='
 
 df_2 = df_1.select("word")
 df_2.printSchema()
-vocabulary_file = "wasb:///Models/word2vec_pubmed_vocabulary_mc_{}".\
+vocabulary_file = "D:\\bio-ner\\tsv\\Models\\word2vec_pubmed_vocabulary_mc_{}".\
      format(min_count)
 
 df_2.repartition(1).write.\
